@@ -23,6 +23,9 @@ NUMBERS = ['1', '2', '3', '4', '5', '6']
 
 WIN = ["\u{23FA} ", "\u{23FA} ", "\u{23FA} ", "\u{23FA} "]
 
+FIRSTGUESS = ['1', '1', '2', '2']
+COMBINATIONS = NUMBERS.repeated_permutation(4).to_a
+
 def rules
     puts '#' * 21
     puts
@@ -73,6 +76,14 @@ def draw_feedback(feedback, guess)
     
 end
 
+def get_new_cipher
+    new_cipher = []
+    puts " \n Please enter your cipher. The computer will then try to guess it. Four numbers between 1 and 6 (Press Enter after each number)"
+    while new_cipher.length < 4
+        new_cipher.push(get_number)
+    end
+    return new_cipher
+end
 
 def get_number
     good_number = false
@@ -98,9 +109,22 @@ def get_next_guess
     return new_guess
 end
 
+def break_or_make
+    input = ''
+    until input == '1' || input == '2'
+      
+      puts '  Are you a code breaker or a code maker?'
+      puts "  Enter '1' to break the code or '2' to make the code:"
+      input = gets.chomp
+    end
+    return input
+end
+
 def start_game
     start = false
 
+    puts "\n  Welcome to Mastermind!"
+    puts '  ---'
     puts "Would you like to play Y / N"
 
     while !start
@@ -119,8 +143,8 @@ def start_game
     return start
 end
 
-def game_on
-
+def game_on_player
+    rules
     code = get_new_code
 
     for i in 1..12 do
@@ -139,17 +163,73 @@ def game_on
     puts "You lose. Better luck next time"
 end
 
+def exact_match_filter(code, guess, num_of_matches)
+    result = code.zip(guess).map {|a, b| b if a == b}
+    result.compact!
+    return result.length >= num_of_matches
+end
+
+def approx_match_filter(guess, feedback_length)
+    filtered_combinations = COMBINATIONS.select { |array| array.intersection(guess).length == feedback_length}
+    return filtered_combinations
+end
+
+def num_of_exact_matches_in_feedback(feedback)
+    return feedback.count { |s| s == ExactMatch}
+end
+
+def game_on_computer(cipher)
+    winner = false
+    next_guess = []
+
+    for i in 1..12
+        if i == 1
+            guess = FIRSTGUESS
+        else
+            guess = next_guess
+        end
+
+
+        feedback = get_feedback(cipher, guess)
+        draw_feedback(feedback, guess)
+
+        if feedback == WIN
+            puts "The computer guessed your code #{cipher}"
+            winner = true
+            break
+        end
+
+        exact_matches = num_of_exact_matches_in_feedback(feedback)
+        new_array = approx_match_filter(guess, feedback.length)
+
+        if exact_matches > 0
+            new_array.select! { |array| exact_match_filter(array, guess, exact_matches) == true}
+        end
+
+        new_array.select! { |array| get_feedback(cipher, array).length > feedback.length && num_of_exact_matches_in_feedback(get_feedback(cipher, array)) > exact_matches}
+        
+        
+        next_guess = new_array[0]
+        
+        sleep(1)
+    end
+end
 
 def play
-    rules
+    
     wanna_play = start_game
     
 
     case 
     when !wanna_play then puts "Thanks. BYE!"
         
-    when wanna_play then game_on
+    when wanna_play then bOm = break_or_make
         
+    end
+
+    case
+    when bOm == '1' then game_on_player
+    when bOm == '2' then game_on_computer(get_new_cipher)
     end
 
 end
